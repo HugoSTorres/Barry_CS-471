@@ -23,11 +23,11 @@ Please comment the code, that way everybody could understand what's going on. Al
 
 **Hugo**:
 
-+traceroute
+		traceroute
   
 **Aarti**:
 
-+ping
+		ping
 
 **Lukas**:
 
