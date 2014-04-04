@@ -5,7 +5,7 @@ Implementing networking tools leveraging material learned in class.
 
 **Directory structure**:
 
-  *Barry_CS-471/<package name>/<however you want your source files organized>*
+	*Barry_CS-471/<package name>/<however you want your source files organized>*
 
 _Hugo_:
 
@@ -23,11 +23,11 @@ Please comment the code, that way everybody could understand what's going on. Al
 
 **Hugo**:
 
-		traceroute
+	traceroute
   
 **Aarti**:
 
-		ping
+	ping
 
 **Lukas**:
 
