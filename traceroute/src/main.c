@@ -1,3 +1,8 @@
+/*
+ * routetracer - an implementation of traceroute for CS-471 project
+ * Written by: Hugo Torres
+ */
+
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -42,7 +47,7 @@ int main(int argc, const char *argv[])
 	//convert address from pure numbers to something easier to read
 	inet_ntop(ret->ai_family, &(ip->sin_addr), ipv4, INET_ADDRSTRLEN);
 
-	//kindly inform the user of which machine they are connected to
-	printf("%s\n", ipv4);
+	//kindly inform the user of which hostname they are connecting to
+	printf("Route for: %s\n", ipv4);
 	return 0;
 }
