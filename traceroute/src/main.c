@@ -29,6 +29,7 @@ int main(int argc, const char *argv[])
 	struct addrinfo hints, *ret;
 	int status;
 	char ipv4[INET_ADDRSTRLEN];
+	int ttl = 1;
 
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
@@ -50,4 +51,15 @@ int main(int argc, const char *argv[])
 	//kindly inform the user of which hostname they are connecting to
 	printf("Route for: %s\n", ipv4);
 	return 0;
+
+	//create a socket
+	int sock = socket(ret->ai_family, ret->ai_socktype, ret->ai_protocol);
+
+	/*
+	 * We go from hop to hop by incrementing the time to live in the IP header
+	 * for each hop we visit until we reach the destination IP address (which we
+	 * already have). Time to live decrements for every hop, so once it reaches
+	 * zero we report the IP address of the node we are connected to.
+	 */
+	
 }
