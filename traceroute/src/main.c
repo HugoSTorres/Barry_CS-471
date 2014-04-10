@@ -10,6 +10,7 @@
 #include <netdb.h>
 #include <arpa/inet.h>
 #include <netinet/in.h>
+#include <errno.h>
 
 int main(int argc, const char *argv[])
 {
@@ -29,7 +30,9 @@ int main(int argc, const char *argv[])
 	struct addrinfo hints, *ret;
 	int status;
 	char ipv4[INET_ADDRSTRLEN];
-	int ttl = 1;
+	int ttl = 0;
+	char* msg = "Hello";
+	int last_hop = 0;
 
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
@@ -43,14 +46,13 @@ int main(int argc, const char *argv[])
 	}
 
 	//extract IPv4 address from ret
-	struct sockaddr_in *ip = (struct sockaddr_in *)ret->ai_addr;
+	struct sockaddr_in* ip = (struct sockaddr_in *)ret->ai_addr;
 
 	//convert address from pure numbers to something easier to read
 	inet_ntop(ret->ai_family, &(ip->sin_addr), ipv4, INET_ADDRSTRLEN);
 
 	//kindly inform the user of which hostname they are connecting to
 	printf("Route for: %s\n", ipv4);
-	return 0;
 
 	//create a socket
 	int sock = socket(ret->ai_family, ret->ai_socktype, ret->ai_protocol);
@@ -61,5 +63,33 @@ int main(int argc, const char *argv[])
 	 * already have). Time to live decrements for every hop, so once it reaches
 	 * zero we report the IP address of the node we are connected to.
 	 */
+
+	//while(test_ip != dest_ip)
+	//time_to_live++
+	//send_to(dest_addr)
+	//receive icmp error message
+	//get src addr of error msg from ip header of icmp
+	//test_ip = src addr
+	/*
+	while (last_hop == 0) {
+		ttl++;
+		setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
+		sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)ip, sizeof(ip));
+	}
+	*/
+
+	ttl = 1;
+	if ((setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) != -1) {
+		printf("TTL set successfully\n");
+	} else {
+		printf("Error setting TTL: %s\n", strerror(errno));
+	}
 	
+	if ((sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)ip, 
+					sizeof(struct sockaddr *))) != -1) {
+		printf("msg sent successfully");
+	} else {
+		printf("Error sending msg: %s\n", strerror(errno));
+	}
+	return 0;
 }
