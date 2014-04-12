@@ -56,6 +56,10 @@ int main(int argc, const char *argv[])
 
 	//create a socket
 	int sock = socket(ret->ai_family, ret->ai_socktype, ret->ai_protocol);
+	if (sock == -1) {
+		fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
+		return -1;
+	}
 
 	/*
 	 * We go from hop to hop by incrementing the time to live in the IP header
@@ -85,8 +89,8 @@ int main(int argc, const char *argv[])
 		printf("Error setting TTL: %s\n", strerror(errno));
 	}
 	
-	if ((sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)ip, 
-					sizeof(struct sockaddr *))) != -1) {
+	if ((sendto(sock, msg, strlen(msg), 0, ret->ai_addr, 
+					ret->ai_addrlen)) != -1) {
 		printf("msg sent successfully");
 	} else {
 		printf("Error sending msg: %s\n", strerror(errno));
