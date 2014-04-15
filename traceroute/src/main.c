@@ -30,7 +30,9 @@ int main(int argc, const char *argv[])
 	int src_sock = 0;
 	int recv_sock = 0;
 	const char* dest_port = "9001";
-
+	int icmp_msg_len = 74;
+	char icmp_msg[icmp_msg_len];
+	
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; //IPv4
@@ -96,6 +98,13 @@ int main(int argc, const char *argv[])
 		printf("msg sent successfully\n");
 	} else {
 		fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
+	}
+
+	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0, NULL, NULL)) != -1) {
+		/* PROCESS THE INFORMATION */
+		printf("Packet received\n");
+	} else {
+		fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
 	}
 	
 	return 0;
