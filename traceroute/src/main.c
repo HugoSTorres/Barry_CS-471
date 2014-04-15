@@ -33,6 +33,7 @@ int main(int argc, const char *argv[])
 	int status = 0;
 	int ttl = 0;
 	int last_hop = 0;
+	const char* dest_port = "9001";
 
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
@@ -40,7 +41,7 @@ int main(int argc, const char *argv[])
 	hints.ai_socktype = SOCK_DGRAM; //UDP packets
 
 	//call getaddrinfo to fill ret, w/ error chk
-	if ((status = getaddrinfo(argv[1], NULL, &hints, &ret)) != 0) {
+	if ((status = getaddrinfo(argv[1], dest_port, &hints, &ret)) != 0) {
 		printf("getaddrinfo: %s\n", gai_strerror(status));
 		return -1;
 	}
@@ -91,7 +92,7 @@ int main(int argc, const char *argv[])
 
 	if ((sendto(host_sock, msg, strlen(msg), 0, ret->ai_addr, 
 					ret->ai_addrlen)) != -1) {
-		printf("msg sent successfully");
+		printf("msg sent successfully\n");
 	} else {
 		printf("Error sending msg: %s\n", strerror(errno));
 	}
