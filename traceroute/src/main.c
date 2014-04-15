@@ -16,10 +16,6 @@
 
 int main(int argc, const char *argv[])
 {
-	/*
-	 * Help the technically challenged among us who have no idea
-	 * what on God's green Earth they are doing with this thing.
-	 */
 	if (argc != 2) {
 		printf("usage: routetracer <ip address or hostname>\n");
 		return -1;
@@ -55,13 +51,14 @@ int main(int argc, const char *argv[])
 	//kindly inform the user of which hostname they are connecting to
 	printf("Route for: %s\n", ipv4);
 
-	//create a socket for host machine
+	//create a socket for our machine
 	if ((src_sock = socket(ret->ai_family, ret->ai_socktype, 
 					ret->ai_protocol)) < 0) {
 		fprintf(stderr, "Error creating host socket: %s\n", strerror(errno));
 		return -1;
 	}
-	
+
+	//create a socket to recv icmp packet from hops	
 	if ((recv_sock = socket(AF_INET, SOCK_DGRAM, UNSPEC_PROTO)) < 0){
 		fprintf(stderr, "Error creating recv socket: %s\n", strerror(errno));
 	}
