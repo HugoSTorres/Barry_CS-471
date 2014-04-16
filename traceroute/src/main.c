@@ -23,14 +23,16 @@ int main(int argc, const char *argv[])
 
 	struct addrinfo hints; //params for ret val of getaddrinfo
 	struct addrinfo* ret; //return value of getaddrinfo
+	struct sockaddr* reply_addr;
 	char ipv4[INET_ADDRSTRLEN];
 	char* msg = "THE PORT IS OVER 9000!!!!";
 	int status = 0;
 	int ttl = 0;
 	int src_sock = 0;
 	int recv_sock = 0;
+	socklen_t reply_addr_len = sizeof(struct sockaddr);
 	const char* dest_port = "9001";
-	int icmp_msg_len = 74;
+	int icmp_msg_len = 100;
 	char icmp_msg[icmp_msg_len];
 	
 	//define what we want from getaddrinfo
@@ -100,7 +102,8 @@ int main(int argc, const char *argv[])
 		fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
 	}
 
-	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0, NULL, NULL)) != -1) {
+	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0, reply_addr, 
+					&reply_addr_len)) != -1) {
 		/* PROCESS THE INFORMATION */
 		printf("Packet received\n");
 	} else {
