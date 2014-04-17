@@ -80,35 +80,50 @@ int main(int argc, const char *argv[])
 	//receive icmp error message
 	//get src addr of error msg from ip header of icmp
 	//test_ip = src addr
-	/*
-	while (last_hop == 0) {
+
+	while (ttl < 10) {
 		ttl++;
-		setsockopt(sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl));
-		sendto(sock, msg, strlen(msg), 0, (struct sockaddr *)ip, sizeof(ip));
-	}
-	*/
+    if ((setsockopt(src_sock, IPPROTO_IP, IP_TTL,
+          &ttl, sizeof(ttl))) < 0) {
+      fprintf(stderr, "ttl: %s\n", strerror(errno));
+      return -1;
+    }
 
-	ttl = 1;
-	if (!(setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)))) {
-		printf("TTL set successfully\n");
-	} else {
-		printf("Error setting TTL: %s\n", strerror(errno));
+    if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr,
+                ret->ai_addrlen)) == -1) {
+      fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
+    }
+
+    if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0,
+         (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
+      inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN);
+    	printf("hop: %d, address: %s\n", ttl, ipv4);
+    } else {
+    	fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
+    }
 	}
 
-	if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr,
-					ret->ai_addrlen)) > 0) {
-		printf("msg sent successfully\n");
-	} else {
-		fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
-	}
 
-	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0,
-        (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
-    inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN);
-		printf("Packet received from %s\n", ipv4);
-	} else {
-		fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
-	}
+	// if (!(setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl)))) {
+	// 	printf("TTL set successfully\n");
+	// } else {
+	// 	printf("Error setting TTL: %s\n", strerror(errno));
+	// }
+
+	// if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr,
+	// 				ret->ai_addrlen)) > 0) {
+	// 	printf("msg sent successfully\n");
+	// } else {
+	// 	fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
+	// }
+  //
+	// if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0,
+  //       (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
+  //   inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN);
+	// 	printf("Packet received from %s\n", ipv4);
+	// } else {
+	// 	fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
+	// }
 
 	return 0;
 }
