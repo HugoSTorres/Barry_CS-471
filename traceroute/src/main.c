@@ -104,8 +104,8 @@ int main(int argc, const char *argv[])
 
 	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0,
         (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
-		/* PROCESS THE INFORMATION */
-		printf("Packet received\n");
+    inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN);
+		printf("Packet received from %s\n", ipv4);
 	} else {
 		fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
 	}
