@@ -23,7 +23,7 @@ int main(int argc, const char *argv[])
 
 	struct addrinfo hints; //params for ret val of getaddrinfo
 	struct addrinfo* ret; //return value of getaddrinfo
-	struct sockaddr* reply_addr;
+	struct sockaddr_in reply_addr;
 	char ipv4[INET_ADDRSTRLEN];
 	char* msg = "THE PORT IS OVER 9000!!!!";
 	int status = 0;
@@ -34,7 +34,7 @@ int main(int argc, const char *argv[])
 	const char* dest_port = "9001";
 	int icmp_msg_len = 100;
 	char icmp_msg[icmp_msg_len];
-	
+
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; //IPv4
@@ -56,17 +56,17 @@ int main(int argc, const char *argv[])
 	printf("Route for: %s\n", ipv4);
 
 	//create a socket for our machine
-	if ((src_sock = socket(ret->ai_family, ret->ai_socktype, 
+	if ((src_sock = socket(ret->ai_family, ret->ai_socktype,
 					ret->ai_protocol)) < 0) {
 		fprintf(stderr, "Error creating host socket: %s\n", strerror(errno));
 		return -1;
 	}
 
-	//create a socket to recv icmp packet from hops	
+	//create a socket to recv icmp packet from hops
 	if ((recv_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)) < 0){
 		fprintf(stderr, "Error creating recv socket: %s\n", strerror(errno));
 	}
-	
+
 	/*
 	 * We go from hop to hop by incrementing the time to live in the IP header
 	 * for each hop we visit until we reach the destination IP address (which we
@@ -95,20 +95,20 @@ int main(int argc, const char *argv[])
 		printf("Error setting TTL: %s\n", strerror(errno));
 	}
 
-	if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr, 
+	if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr,
 					ret->ai_addrlen)) > 0) {
 		printf("msg sent successfully\n");
 	} else {
 		fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
 	}
 
-	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0, reply_addr, 
-					&reply_addr_len)) != -1) {
+	if ((recvfrom(recv_sock, icmp_msg, icmp_msg_len, 0,
+        (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
 		/* PROCESS THE INFORMATION */
 		printf("Packet received\n");
 	} else {
 		fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
 	}
-	
+
 	return 0;
 }
