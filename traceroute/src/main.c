@@ -63,7 +63,7 @@ int main(int argc, const char *argv[])
 	}
 
 	//create a socket to recv icmp packet from hops	
-	if ((recv_sock = socket(AF_INET, SOCK_DGRAM, UNSPEC_PROTO)) < 0){
+	if ((recv_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)) < 0){
 		fprintf(stderr, "Error creating recv socket: %s\n", strerror(errno));
 	}
 	
