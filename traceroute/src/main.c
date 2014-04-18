@@ -21,7 +21,7 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
-	struct addrinfo hints, *ret; //params for ret val of getaddrinfo
+	struct addrinfo hints, *ret; 
 	struct sockaddr_in reply_addr, *ip;
 
 	const char* dest_port = "9001";
@@ -37,6 +37,9 @@ int main(int argc, const char *argv[])
 	int src_sock;
 	int recv_sock;
 
+	//reply_addr in while loop so we need to initialize it
+	memset(&reply_addr, 0, sizeof(reply_addr));
+
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
 	hints.ai_family = AF_INET; //IPv4
@@ -48,18 +51,9 @@ int main(int argc, const char *argv[])
 		return -1;
 	}
 
-	//extract IPv4 address from ret
-	ip = (struct sockaddr_in *)ret->ai_addr;
-
-	//convert address from pure numbers to something easier to read
-	inet_ntop(ret->ai_family, &(ip->sin_addr), dest, INET_ADDRSTRLEN);
-
-	//kindly inform the user of which computer they are connecting to
-	printf("Route for: %s\n", dest);
-
 	//create an outgoing socket
 	if ((src_sock = socket(ret->ai_family, ret->ai_socktype,
-					ret->ai_protocol)) < 0) {
+							ret->ai_protocol)) < 0) {
 		fprintf(stderr, "Error creating host socket: %s\n", strerror(errno));
 		return -1;
 	}
@@ -68,6 +62,15 @@ int main(int argc, const char *argv[])
 	if ((recv_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP)) < 0){
 		fprintf(stderr, "Error creating recv socket: %s\n", strerror(errno));
 	}
+	
+	//extract IPv4 address from ret
+	ip = (struct sockaddr_in *)ret->ai_addr;
+
+	//convert address from pure numbers to something easier to read
+	inet_ntop(ret->ai_family, &(ip->sin_addr), dest, INET_ADDRSTRLEN);
+	
+	//kindly inform the user of which computer they are connecting to
+	printf("Route for: %s\n", dest);
 
 	/*
 	 * We go from hop to hop by incrementing the time to live in the IP header
