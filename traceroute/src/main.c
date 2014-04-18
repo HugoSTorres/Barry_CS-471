@@ -24,18 +24,18 @@ int main(int argc, const char *argv[])
 	struct addrinfo hints, *ret; //params for ret val of getaddrinfo
 	struct sockaddr_in reply_addr, *ip;
 
-  const char* dest_port = "9001";
+	const char* dest_port = "9001";
 	char *msg = "THE PORT IS OVER 9000!!!!";
 	int ttl = 0;
 
 	socklen_t reply_addr_len = sizeof(struct sockaddr);
 
-  char ipv4[INET_ADDRSTRLEN];
-  char dest[INET_ADDRSTRLEN];
-  char icmp_msg[ICMP_MSG_LEN];
-  int status;
-  int src_sock;
-  int recv_sock;
+	char ipv4[INET_ADDRSTRLEN];
+	char dest[INET_ADDRSTRLEN];
+	char icmp_msg[ICMP_MSG_LEN];
+	int status;
+	int src_sock;
+	int recv_sock;
 
 	//define what we want from getaddrinfo
 	memset(&hints, 0, sizeof(hints));
@@ -75,27 +75,27 @@ int main(int argc, const char *argv[])
 	 * already have). Time to live decrements for every hop, so once it reaches
 	 * zero we report the IP address of the node we are connected to.
 	 */
-	while (ttl < 10) {
+	while (reply_addr.sin_addr.s_addr != ip->sin_addr.s_addr) {
 		ttl++;
-    if ((setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
-      fprintf(stderr, "Error setting ttl: %s\n", strerror(errno));
-      return -1;
-    }
+    	if ((setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
+			fprintf(stderr, "Error setting ttl: %s\n", strerror(errno));
+			return -1;
+    	}
 
-    if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr,
-                ret->ai_addrlen)) == -1) {
-      fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
-      return -1;
-    }
+    	if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr, 
+						ret->ai_addrlen)) == -1) { 
+			fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
+			return -1;
+		}
 
-    if ((recvfrom(recv_sock, icmp_msg, ICMP_MSG_LEN, 0,
-                   (struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
-      inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN);
-    	printf("hop: %d, address: %s\n", ttl, ipv4);
-    } else {
-    	fprintf(stderr, "Error receiving packet: %s\n", strerror(errno));
-      return -1;
-    }
+		if ((recvfrom(recv_sock, icmp_msg, ICMP_MSG_LEN, 0, 
+					(struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
+      		inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN); 
+			printf("hop: %d, address: %s\n", ttl, ipv4); 
+		} else { 
+			fprintf(stderr, "Error receiving packet: %s\n", strerror(errno)); 
+			return -1; 
+		}
 	}
 
 	return 0;
