@@ -80,12 +80,12 @@ int main(int argc, const char *argv[])
 	 */
 	while (reply_addr.sin_addr.s_addr != ip->sin_addr.s_addr) {
 		ttl++;
-    	if ((setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
+		if ((setsockopt(src_sock, IPPROTO_IP, IP_TTL, &ttl, sizeof(ttl))) < 0) {
 			fprintf(stderr, "Error setting ttl: %s\n", strerror(errno));
 			return -1;
-    	}
+	 	}
 
-    	if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr, 
+		if ((sendto(src_sock, msg, strlen(msg), 0, ret->ai_addr, 
 						ret->ai_addrlen)) == -1) { 
 			fprintf(stderr, "Error sending msg: %s\n", strerror(errno));
 			return -1;
@@ -93,7 +93,7 @@ int main(int argc, const char *argv[])
 
 		if ((recvfrom(recv_sock, icmp_msg, ICMP_MSG_LEN, 0, 
 					(struct sockaddr*)&reply_addr, &reply_addr_len)) != -1) {
-      		inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN); 
+			inet_ntop(AF_INET, &(reply_addr.sin_addr), ipv4, INET_ADDRSTRLEN); 
 			printf("hop: %d, address: %s\n", ttl, ipv4); 
 		} else { 
 			fprintf(stderr, "Error receiving packet: %s\n", strerror(errno)); 
