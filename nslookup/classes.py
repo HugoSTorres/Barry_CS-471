@@ -34,7 +34,10 @@ class ImportsChecker():
             print colored('[%s] [+] %s module has been sucessfully installed' %(time.strftime('%H:%M:%S'), module), 'green')
 
 class NSLookup():
-    
+    # define the list of possible record types
+    _POSSIBLE_OTHER_TYPES = ['AFSDB', 'CERT', 'DLV', 'DNSKEY', 'DS', 'GPOS', 'HINFO', 'HIP', 'ISDN', 'LOC', 'NSEC', 'NSEC3', 'NSEC3PARAM',
+                            'PTR', 'RP', 'RRSIG', 'RT', 'SPF', 'SSHFP', 'TXT', 'X25', 'APL', 'DHCID', 'IPSECKEY', 'KX', 'NAPTR', 'NSAP',
+                            'PX', 'SRV', 'WKS']
     def __init__(self, domain, reverse = False):
         self._resolver = dns.resolver.Resolver()  
         self._authoritative_list = []
@@ -153,20 +156,67 @@ class NSLookup():
         Since it was hard to find websites that use order records (like SRV or PTR) to test it, I did not filter the results
         from DNS records for those type and just print them directly
     '''
-    def _printOtherInfo(self):
-        answer = self._resolver.query(self._domain, self._type)
+    def _printOtherInfo(self, type):
+        answer = self._resolver.query(self._domain, type)
         print answer.response.answer[0]
     '''
         Prints ANY type records
     '''
     def _printANYInfo(self):
-        self.printSOAInfo()
-        self.printMXInfo()
-        self.printAAAAInfo()
-        self.printAInfo()
-        self.printNSInfo()
-        self.printCNAMEInfo()
-    
+        # Since we check all possible records, we don't care about recrods that we cannot retrieve
+        # However, let's keep a flag that will check that if none of the records have been retrieved 
+        # then display an error message
+        flag = False
+        try:
+            self._printSOAInfo()
+            flag = True
+        except:
+            pass
+        
+        try:
+            self._printMXInfo()
+            flag = True
+        except:
+            pass
+        
+        try:
+            self._printAAAAInfo()
+            flag = True
+        except:
+            pass
+        
+        try:
+            self._printAInfo()
+            flag = True
+        except:
+            pass
+        
+        try:
+            self._printNSInfo()
+            flag = True
+        except:
+            pass
+        
+        try:
+            self._printCNAMEInfo()
+            flag = True
+        except:
+            pass
+        
+        # the above functions just checks the most common record types
+        # lets try to print all the possible records:
+        for type in self._POSSIBLE_OTHER_TYPES:
+            try:
+                self._printOtherInfo(type)
+                flag = True
+            except (dns.resolver.NoAnswer, dns.resolver.Timeout) as e:
+                pass
+            
+        # handle the case where there are no records retrieved
+        if not flag:
+            print colored("No answer has been received. Please try again later", 'red')
+            exit()
+        
     '''
         Looks up the domain name from the IP address
     '''
@@ -189,9 +239,12 @@ class NSLookup():
         Sets what kind of request to perform and executes it
     '''
     def executeType(self, type):
-        self._type = type
-        
         self._printServerInfo()
+        
+        # ANY needs special handling, because it does error handling within the function
+        if type == 'ANY':
+            self._printANYInfo()
+            return
         
         try:
             if type == 'A':
@@ -206,10 +259,8 @@ class NSLookup():
                 self._printAAAAInfo()
             elif type == 'SOA':
                 self._printSOAInfo()
-            elif type == 'ANY':
-                self._printANYInfo()
             else:
-                self._printOtherInfo()
+                self._printOtherInfo(type)
         except dns.resolver.NoAnswer:
             print colored("No answer has been received. Please try different type", 'red')
             exit()
