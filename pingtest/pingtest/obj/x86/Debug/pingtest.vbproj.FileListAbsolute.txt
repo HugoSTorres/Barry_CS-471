@@ -1,0 +1,9 @@
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.Form1.resources
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.Resources.resources
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.vbproj.GenerateResource.Cache
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\bin\Debug\pingtest.exe
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\bin\Debug\pingtest.pdb
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\bin\Debug\pingtest.xml
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.exe
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.xml
+C:\Users\Aarti\AppData\Local\Temporary Projects\pingtest\obj\x86\Debug\pingtest.pdb
