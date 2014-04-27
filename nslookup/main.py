@@ -2,12 +2,12 @@ import dns
 import dns.name
 import dns.query
 import dns.resolver
-import socket, time
+import socket, time, getopt, signal, sys
 from termcolor import colored
 from setuptools.command import easy_install
 
 class ImportsChecker():
-    _MODULES = ('termcolor', 'dns', 'time', 'socket')
+    _MODULES = ('termcolor', 'dns', 'time', 'socket', 'getopt')
     def __init__(self):
         self.checkModules()
         print colored('[%s] [+] All necessary modules are installed' % time.strftime('%H:%M:%S'), 'green')
@@ -31,9 +31,14 @@ class ImportsChecker():
 
 class NSLookup():
     
-    def __init__(self):
+    def __init__(self, domain, reverse = False):
         self._resolver = dns.resolver.Resolver()  
         self._authoritative_list = []
+        
+        if (not reverse):
+            self._domain = domain
+        else:
+            self._reverseDNSLookup(domain)
   
     def _printServerInfo(self):
         # get nameserver, port and print it
@@ -47,7 +52,7 @@ class NSLookup():
         for item in self._authoritative_list:
             print item[0] + " \tinternet address: " + item[1] 
 
-    def _printAInfo(self, domain):
+    def _printAInfo(self):
         answer = my_resolver.query(domain_name, 'A')
         
         # index for substring
@@ -57,7 +62,7 @@ class NSLookup():
             print "Name: \t" + str(answer.response.question[0])[:idx -2]
             print "Address: \t" + item.address
             
-    def _printMXInfo(self, domain):
+    def _printMXInfo(self):
         answer = my_resolver.query(domain, 'MX')
         # let's iterate through A's array and print
     
@@ -126,7 +131,7 @@ class NSLookup():
         self.printNSInfo(domain)
         self.printCNAMEInfo(domain)
     
-    def reverseDNSLookup(self,ip):
+    def _reverseDNSLookup(self,ip):
         addr = dns.reversename.from_address(ip)
         print addr 
     
@@ -156,3 +161,57 @@ domain_name = "google.com"
 # exceptions to handle : NoAnswer, Timeout
 #printAuthoritative()
 #reverseDNSLookup("74.125.21.102")
+
+usage = {'query': False, 'domain' : False, 'timeout' : False, 'port' : False, 'ip' : False}
+def main(argv):
+    global usage
+    try:
+        opts, args = getopt.getopt(argv,"hq:d:t:p:i:",
+                                   ['query=', 'domain=', 'timeout=', 'port=', 'ip='])
+    except getopt.GetoptError:
+        print 'Type in \'./python nslookup.py -h\' for help'
+        exit()
+    if not opts:
+        print 'Type in \'./python nslookup.py -h\' for help'
+        exit()
+    for opt, arg in opts:
+        if opt == '-h':
+            print '''usage: python nslookup.py [options]
+            Options:
+            
+            -q type, --query=type                          Sets the type of the lookup (for example, A, MX, CNAME,
+                                                           AAAA, ANY, NS, SOA). Default is A
+            -d [domain name], --domain=[domain name]       Domain name (or IP address) for which to perform the NS lookup
+            -t timeout, --timeout=timeout                  Change the initial timeout interval for waiting for a reply to number seconds
+            -p port, --port=port                           Change the default TCP/UDP name server port value. Default is 53
+            -i [IP Adress], --ip=[IP Address]              When chosen, the software will perform the reverse name lookup             
+            -h                                             Shows this help menu
+            '''
+            sys.exit()
+        elif opt in ('-q', '--query'):
+            usage['query'] = arg
+        elif opt in ('-d', '--domain'):
+            usage['domain'] = arg
+        elif opt in ('-t', '--timeout'):
+            usage['timeout'] = arg
+        elif opt in ('-p', '--port'):
+            usage['port'] = arg
+        elif opt in ('-i', '--ip'):
+            usage['ip'] = arg
+        
+def cleanExit(signum, frm):
+    print colored("Exiting the program", 'red')
+    exit()
+    
+if __name__ == '__main__':
+    main(sys.argv[1:])
+    ch = ImportsChecker()
+    from termcolor import colored
+    signal.signal(signal.SIGINT, cleanExit)
+    if usage['domain']:
+        ns = NSLookup(usage['domain'])
+    elif usage['ip'] :
+        ns = NSLookup(usage['ip'], True)
+    else:
+        print colored('One of the arguments -d or -i must be supplied', 'red')
+        exit()
