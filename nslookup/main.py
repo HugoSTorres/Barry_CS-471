@@ -32,7 +32,7 @@ def printMXInfo(domain):
     # let's iterate through A's array and print
 
     for data in answer:
-        print answer.canonical_name[0] + '.' + answer.canonical_name[1] + "\t mail exchanger: " + str(data)
+        print str(answer.canonical_name) + "\t mail exchanger: " + str(data)
         
         # extract the hostname of MX name server
         idx = str(data).index(' ')
@@ -46,7 +46,7 @@ def printNSInfo(domain):
     # let's iterate through A's array and print
     
     for data in answer:
-        print answer.canonical_name[0] + '.' + answer.canonical_name[1] + "\t nameserver: " + str(data)
+        print str(answer.canonical_name) + "\t nameserver: " + str(data)
         
         # extract the hostname of NS name server
         ns_name = str(data)[:len(str(data)) - 1]
@@ -60,7 +60,7 @@ def printSOAInfo(domain):
     
     info =  str(answer.response.answer[0]).split()
     
-    print answer.canonical_name[0] + '.' + answer.canonical_name[1]
+    print str(answer.canonical_name)
     
     origin = info[4][:len(info[4]) - 1]
     mail_addr = info[5][:len(info[5]) - 1]
@@ -78,17 +78,36 @@ def printAAAAInfo(domain):
     answer = my_resolver.query(domain, 'AAAA')
     idx = str(answer.response.answer[0]).rindex(' ')
     
-    print answer.canonical_name[0] + '.' + answer.canonical_name[1] + "\t has AAAA address" + str(answer.response.answer[0])[idx:]
+    print str(answer.canonical_name) + "\t has AAAA address" + str(answer.response.answer[0])[idx:]
 
+def printCNAMEInfo(domain):
+    answer = my_resolver.query(domain, 'CNAME')
+    idx = str(answer.response.answer[0]).rindex(' ')
+    print str(answer.canonical_name) + "\t canonical name:" + str(answer.response.answer[0])[idx:]
+def printOtherInfo(domain, type):
+    answer = my_resolver.query(domain, type)
+    print answer.response.answer[0]
 def printANYInfo(domain):
     printSOAInfo(domain)
     printMXInfo(domain)
     printAAAAInfo(domain)
     printAInfo(domain)
     printNSInfo(domain)
+    printCNAMEInfo(domain)
+
+def reverseDNSLookup(ip):
+    addr = dns.reversename.from_address(ip)
+    print addr 
     
 my_resolver = dns.resolver.Resolver()
+# setting the port:
+#my_resolver.port = 
+
+#setting timeout:
+#my_resolver.timeout =
+
 printServerInfo()
+
 
 domain_name = "google.com"
 print "Non-authoritative answer:"
@@ -97,6 +116,9 @@ print "Non-authoritative answer:"
 #printNSInfo(domain_name)
 #printSOAInfo(domain_name)
 #printAAAAInfo(domain_name)
-printANYInfo(domain_name)
+#printANYInfo(domain_name)
+printOtherInfo(domain_name, 'A')
+#printCNAMEInfo(domain_name)
 # exceptions to handle : NoAnswer, Timeout
-printAuthoritative()
+#printAuthoritative()
+#reverseDNSLookup("74.125.21.102")
