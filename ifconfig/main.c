@@ -98,5 +98,5 @@ main(int argc, char *argv[])
 
     // free the interfaces
     freeifaddrs(ifaddr);
-    exit(EXIT_SUCCESS);
+    exit(0);
 }
