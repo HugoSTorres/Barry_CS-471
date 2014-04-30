@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-
+#include "structs/linkedList.h"
 int
 main(int argc, char *argv[])
 {
@@ -16,6 +16,7 @@ main(int argc, char *argv[])
     char host[NI_MAXHOST];
     char *family_str;
     unsigned int flags;
+    linked_list_t *flag_list = malloc(sizeof(linked_list_t)); // list for flags
 
     // get the interfaces addresses
     if (getifaddrs(&ifaddr) == -1) {
@@ -55,42 +56,41 @@ main(int argc, char *argv[])
 					printf("\tinet address: <%s>\n", host);
 				}
 
+				// assign flags
 				flags = ifa->ifa_flags;
 
+				// add all the flags to the list
 				if(flags){
-					printf("< ");
 					if (flags & IFF_UP)
-						printf("UP, ");
+						addTop(flag_list, IFF_UP);
 					if (flags & IFF_BROADCAST)
-						printf("BROADCAST, ");
+						addTop(flag_list, IFF_BROADCAST);
 					if (flags & IFF_DEBUG)
-						printf("DEBUG, ");
+						addTop(flag_list, IFF_DEBUG);
 					if (flags & IFF_LOOPBACK)
-						printf("LOOPBACK, ");
+						addTop(flag_list, IFF_LOOPBACK);
 					if (flags & IFF_POINTOPOINT)
-						printf("POINT-TO-POINT, ");
+						addTop(flag_list, IFF_POINTOPOINT);
 					if (flags & IFF_NOTRAILERS)
-						printf("NO-TRAILERS, ");
+						addTop(flag_list, IFF_NOTRAILERS);
 					if (flags & IFF_RUNNING)
-						printf("RUNNING, ");
+						addTop(flag_list, IFF_RUNNING);
 					if (flags & IFF_NOARP)
-						printf("NOARP, ");
+						addTop(flag_list, IFF_NOARP);
 					if (flags & IFF_PROMISC)
-						printf("PROMISCUOUS, ");
+						addTop(flag_list, IFF_PROMISC);
 					if (flags & IFF_ALLMULTI)
-						printf("RECEIVE ALL MULTICAST, ");
+						addTop(flag_list, IFF_ALLMULTI);
 					if (flags & IFF_OACTIVE)
-						printf("ACTIVE, ");
+						addTop(flag_list, IFF_OACTIVE);
 					if (flags & IFF_SIMPLEX)
-						printf("SIMPLEX, ");
+						addTop(flag_list, IFF_SIMPLEX);
 					if (flags & IFF_MULTICAST)
-						printf("MULTICAST, ");
-					printf(">\n");
+						addTop(flag_list, IFF_MULTICAST);
 				}
 
 			}
 
-			printf("\n");
 
         }
 
