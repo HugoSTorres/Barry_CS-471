@@ -13,6 +13,19 @@
 #include <netinet/in.h>
 #include <string.h>
 
+// defines for convenience
+#define IP_ADDR 0x01
+#define P2P_ADDR 0x02
+#define BCAST_ADDR 0x03
+#define MASK_ADDR 0x04
+#define AUTOCONF_ADDR 0x05
+#define AUTOCONF_MASK 0x06
+#define IPV4ALL_ADDR 0x07
+#define LINK_LEVEL_ADDR 0x08
+
+
+void printIPAddress(char *, int, int, struct ifreq);
+
 int
 main(int argc, char *argv[])
 {
@@ -63,21 +76,32 @@ main(int argc, char *argv[])
 			exit(1);
 		}
 
+		//output current interface
+		printf("Interface: %s\n", current_interface);
+
 		// create a muppet socket to act as a file descriptor for ioctl()
 		int fd=socket(AF_INET,SOCK_DGRAM,0);
 		if (fd==-1) {
 			puts("Socket could not be created");
 			exit(1);
 		}
-
-		//
-		if (ioctl(fd,SIOCGIFADDR,&ifr)==-1) {
-			flag = 1;
-		}
+		// IP
+		printIPAddress("IP", IP_ADDR, fd, ifr);
+		// Point to point
+		printIPAddress("Point-to-Point", P2P_ADDR, fd, ifr);
+		// broadcast
+		printIPAddress("Broadcast", BCAST_ADDR, fd, ifr);
+		//netmask
+		printIPAddress("Netmask", MASK_ADDR, fd, ifr);
+		//autoconf
+		printIPAddress("Autoconf", AUTOCONF_ADDR, fd, ifr);
+		//autoconf mask
+		printIPAddress("Autoconf mask", AUTOCONF_MASK, fd, ifr);
+		//ipv4all
+		printIPAddress("IPv4All", IPV4ALL_ADDR, fd, ifr);
+		//link level
+		printIPAddress("Link level", LINK_LEVEL_ADDR, fd, ifr);
 		close(fd);
-
-		struct sockaddr_in* ipaddr = (struct sockaddr_in*)&ifr.ifr_addr;
-		printf("IP address: %s\n",inet_ntoa(ipaddr->sin_addr));
 //        if (ifa->ifa_addr != NULL){
 //        	// get the family
 //			family = ifa->ifa_addr->sa_family;
@@ -150,4 +174,47 @@ main(int argc, char *argv[])
     // free the interfaces
     freeifaddrs(ifaddr);
     exit(0);
+}
+
+void printIPAddress(char *name, int method, int fd, struct ifreq ifr){
+	int result;
+	switch(method){
+		case IP_ADDR:
+			result = ioctl(fd,SIOCGIFADDR, &ifr);
+			break;
+		case P2P_ADDR:
+			result = ioctl(fd,SIOCGIFDSTADDR, &ifr);
+			break;
+		case BCAST_ADDR:
+			result = ioctl(fd, SIOCGIFBRDADDR, &ifr);
+			break;
+		case MASK_ADDR:
+			result = ioctl(fd, SIOCGIFNETMASK, &ifr);
+			break;
+		case AUTOCONF_ADDR:
+			result = ioctl(fd, SIOCAUTOADDR, &ifr);
+			break;
+		case AUTOCONF_MASK:
+			result = ioctl(fd, SIOCAUTONETMASK, &ifr);
+			break;
+		case IPV4ALL_ADDR:
+			result = ioctl(fd, SIOCARPIPLL, &ifr);
+			break;
+		case LINK_LEVEL_ADDR:
+			result = ioctl(fd, SIOCSIFLLADDR, &ifr);
+			break;
+		default:
+			return;
+	}
+	// check if not failed
+	if (result==-1) {
+		return;
+	}
+
+	struct sockaddr_in* ipaddr = (struct sockaddr_in*)&ifr.ifr_addr;
+	char *ip = inet_ntoa(ipaddr->sin_addr);
+
+	// no need to print 0's address
+	if (strcmp(ip, "0.0.0.0"))
+		printf("\t%s address: %s\n", name, inet_ntoa(ipaddr->sin_addr));
 }
