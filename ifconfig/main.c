@@ -34,7 +34,27 @@ void displayComputerInfo();
 
 int
 main(int argc, char *argv[]){
+	if (argc <= 1){
+		displayComputerInfo();
+	} else {
+		if (!strcmp(argv[1], "help")){
+			puts("Usage: ./ifconfig [options]\n"
+				 "Options:\n\n"
+				 "up [interface name]					Brings the interface up\n"
+				 "down [interface name]					Puts the interface down\n"
+				 "help									Shows this screen\n"
+				 "[no options]							Shows the computer network interface configurations\n");
+			exit(0);
+		}
 
+		if (!strcmp(argv[1], "up")){
+			// bring the interface up
+		} else if (!strcmp(argv[1], "down")){
+			// bring the interface down
+		} else{
+			puts("Type in ./ifconfig help for usage.");
+		}
+	}
     exit(0);
 }
 
