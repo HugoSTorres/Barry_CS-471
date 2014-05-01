@@ -25,6 +25,7 @@
 
 
 void printIPAddress(char *, int, int, struct ifreq);
+void printFlags(unsigned int);
 
 int
 main(int argc, char *argv[])
@@ -34,9 +35,7 @@ main(int argc, char *argv[])
     char host[NI_MAXHOST];
     char *family_str;
     unsigned int flags;
-    linked_list_t *flag_list = malloc(sizeof(linked_list_t)); // list for flags
     char *current_interface = "none"; // holds the value for the current interface.
-    char *if_name;
 
     /**
      * The way I use the flag is for detection whether ioctl request was successful
@@ -52,6 +51,9 @@ main(int argc, char *argv[])
         exit(1);
     }
 
+    // create a muppet socket to act as a file descriptor for ioctl()
+    // I can create it here, since I can reuse it
+    int fd=socket(AF_INET,SOCK_DGRAM,0);
 
     for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
     	// make sure the address is not null
@@ -79,29 +81,46 @@ main(int argc, char *argv[])
 		//output current interface
 		printf("Interface: %s\n", current_interface);
 
-		// create a muppet socket to act as a file descriptor for ioctl()
-		int fd=socket(AF_INET,SOCK_DGRAM,0);
 		if (fd==-1) {
 			puts("Socket could not be created");
 			exit(1);
 		}
+
+		// print flags
+		printFlags(ifa->ifa_flags);
+
+		// prints the MTU
+		if (ioctl(fd, SIOCGIFMTU, &ifr) != -1)
+				printf("MTU: %d\n", ifr.ifr_metric);
+		// prints the MTU
+		if (ioctl(fd, SIOCGIFCAP, &ifr) != -1)
+				printf("Capabilities: %d\n", ifr.ifr_metric);
+
 		// IP
 		printIPAddress("IP", IP_ADDR, fd, ifr);
+
 		// Point to point
 		printIPAddress("Point-to-Point", P2P_ADDR, fd, ifr);
+
 		// broadcast
 		printIPAddress("Broadcast", BCAST_ADDR, fd, ifr);
+
 		//netmask
 		printIPAddress("Netmask", MASK_ADDR, fd, ifr);
+
 		//autoconf
 		printIPAddress("Autoconf", AUTOCONF_ADDR, fd, ifr);
+
 		//autoconf mask
 		printIPAddress("Autoconf mask", AUTOCONF_MASK, fd, ifr);
+
 		//ipv4all
 		printIPAddress("IPv4All", IPV4ALL_ADDR, fd, ifr);
+
 		//link level
 		printIPAddress("Link level", LINK_LEVEL_ADDR, fd, ifr);
-		close(fd);
+
+
 //        if (ifa->ifa_addr != NULL){
 //        	// get the family
 //			family = ifa->ifa_addr->sa_family;
@@ -173,6 +192,7 @@ main(int argc, char *argv[])
 
     // free the interfaces
     freeifaddrs(ifaddr);
+    close(fd);
     exit(0);
 }
 
@@ -217,4 +237,95 @@ void printIPAddress(char *name, int method, int fd, struct ifreq ifr){
 	// no need to print 0's address
 	if (strcmp(ip, "0.0.0.0"))
 		printf("\t%s address: %s\n", name, inet_ntoa(ipaddr->sin_addr));
+}
+void printFlags(unsigned int flags){
+	linked_list_t *flag_list = malloc(sizeof(linked_list_t)); // list for flags
+	node_t* node;
+	int comma_flag = 0; // flag for comma
+
+	// add all the flags to the list
+	if(flags){
+		if (flags & IFF_UP)
+			addTop(flag_list, IFF_UP);
+		if (flags & IFF_BROADCAST)
+			addTop(flag_list, IFF_BROADCAST);
+		if (flags & IFF_DEBUG)
+			addTop(flag_list, IFF_DEBUG);
+		if (flags & IFF_LOOPBACK)
+			addTop(flag_list, IFF_LOOPBACK);
+		if (flags & IFF_POINTOPOINT)
+			addTop(flag_list, IFF_POINTOPOINT);
+		if (flags & IFF_NOTRAILERS)
+			addTop(flag_list, IFF_NOTRAILERS);
+		if (flags & IFF_RUNNING)
+			addTop(flag_list, IFF_RUNNING);
+		if (flags & IFF_NOARP)
+			addTop(flag_list, IFF_NOARP);
+		if (flags & IFF_PROMISC)
+			addTop(flag_list, IFF_PROMISC);
+		if (flags & IFF_ALLMULTI)
+			addTop(flag_list, IFF_ALLMULTI);
+		if (flags & IFF_OACTIVE)
+			addTop(flag_list, IFF_OACTIVE);
+		if (flags & IFF_SIMPLEX)
+			addTop(flag_list, IFF_SIMPLEX);
+		if (flags & IFF_MULTICAST)
+			addTop(flag_list, IFF_MULTICAST);
+	}
+
+	printf("\tFlags:%u", flags);
+	printf("<");
+
+	for(node = flag_list->first; node != NULL; node = node->next){
+		// comma is not needed on the first element
+		if(comma_flag){
+			printf(", ");
+		} else {
+			comma_flag = 1;
+		}
+		switch(node->value){
+			case IFF_UP:
+				printf("UP");
+				break;
+			case IFF_BROADCAST:
+				printf("BROADCAST");
+				break;
+			case IFF_DEBUG:
+				printf("DEBUG");
+				break;
+			case IFF_LOOPBACK:
+				printf("LOOPBACK");
+				break;
+			case IFF_POINTOPOINT:
+				printf("POINT-TO-POINT");
+				break;
+			case IFF_NOTRAILERS:
+				printf("NO TRAILERS");
+				break;
+			case IFF_RUNNING:
+				printf("RUNNING");
+				break;
+			case IFF_NOARP:
+				printf("NO ARP");
+				break;
+			case IFF_PROMISC:
+				printf("PROMISCUOUS");
+				break;
+			case IFF_ALLMULTI:
+				printf("ALL MULTICAST");
+				break;
+			case IFF_OACTIVE:
+				printf("ACTIVE");
+				break;
+			case IFF_SIMPLEX:
+				printf("SIMPLEX");
+				break;
+			case IFF_MULTICAST:
+				printf("MULTICAST");
+				break;
+			default:
+				break;
+		}
+	}
+	printf("> ");
 }
