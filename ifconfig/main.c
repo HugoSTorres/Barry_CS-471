@@ -26,6 +26,8 @@
 
 void printIPAddress(char *, int, int, struct ifreq);
 void printFlags(unsigned int);
+void printHeader(char *, void (*)(unsigned int), unsigned int);
+void printCapabilities(unsigned int);
 
 int
 main(int argc, char *argv[])
@@ -79,7 +81,7 @@ main(int argc, char *argv[])
 		}
 
 		//output current interface
-		printf("Interface: %s\n", current_interface);
+		printf("Interface: %s", current_interface);
 
 		if (fd==-1) {
 			puts("Socket could not be created");
@@ -87,14 +89,14 @@ main(int argc, char *argv[])
 		}
 
 		// print flags
-		printFlags(ifa->ifa_flags);
-
+		printHeader("Flags", &printFlags, ifa->ifa_flags);
 		// prints the MTU
 		if (ioctl(fd, SIOCGIFMTU, &ifr) != -1)
-				printf("MTU: %d\n", ifr.ifr_metric);
-		// prints the MTU
+				printf("\tMTU: %d", ifr.ifr_metric);
+
+		// prints the options
 		if (ioctl(fd, SIOCGIFCAP, &ifr) != -1)
-				printf("Capabilities: %d\n", ifr.ifr_metric);
+			printHeader("Options", &printCapabilities, ifr.ifr_curcap);
 
 		// IP
 		printIPAddress("IP", IP_ADDR, fd, ifr);
@@ -119,74 +121,6 @@ main(int argc, char *argv[])
 
 		//link level
 		printIPAddress("Link level", LINK_LEVEL_ADDR, fd, ifr);
-
-
-//        if (ifa->ifa_addr != NULL){
-//        	// get the family
-//			family = ifa->ifa_addr->sa_family;
-//
-//			family_str = (family == AF_INET) ? "AF_INET" : (family == AF_INET6) ?  "AF_INET6" : "";
-//
-//			printf("%s	  \naddress family: %d %s\n",
-//								ifa->ifa_name, family,family_str);
-//			if (family == AF_INET || family == AF_INET6) {
-//				// get the regular address
-//				s = getnameinfo(ifa->ifa_addr,	(family == AF_INET) ? sizeof(struct sockaddr_in) :
-//											  sizeof(struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-//				if (s == 0) {
-//					printf("\tinet6 address: <%s>\n", host);
-//				}
-//
-//				// get netmask addresss
-//				s = getnameinfo(ifa->ifa_netmask,	(family == AF_INET) ? sizeof(struct sockaddr_in) :
-//											  sizeof(struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-//				if (s == 0) {
-//					printf("\tnetmask address: <%s>\n", host);
-//				}
-//				// get broadcast address
-//				s = getnameinfo(ifa->ifa_addr,	(family == AF_INET) ? sizeof(struct sockaddr_in) :
-//											  sizeof(struct sockaddr_in6), host, NI_MAXHOST, NULL, 0, NI_NUMERICHOST);
-//				if (s == 0) {
-//					printf("\tinet address: <%s>\n", host);
-//				}
-//
-//				// assign flags
-//				flags = ifa->ifa_flags;
-//
-//				// add all the flags to the list
-//				if(flags){
-//					if (flags & IFF_UP)
-//						addTop(flag_list, IFF_UP);
-//					if (flags & IFF_BROADCAST)
-//						addTop(flag_list, IFF_BROADCAST);
-//					if (flags & IFF_DEBUG)
-//						addTop(flag_list, IFF_DEBUG);
-//					if (flags & IFF_LOOPBACK)
-//						addTop(flag_list, IFF_LOOPBACK);
-//					if (flags & IFF_POINTOPOINT)
-//						addTop(flag_list, IFF_POINTOPOINT);
-//					if (flags & IFF_NOTRAILERS)
-//						addTop(flag_list, IFF_NOTRAILERS);
-//					if (flags & IFF_RUNNING)
-//						addTop(flag_list, IFF_RUNNING);
-//					if (flags & IFF_NOARP)
-//						addTop(flag_list, IFF_NOARP);
-//					if (flags & IFF_PROMISC)
-//						addTop(flag_list, IFF_PROMISC);
-//					if (flags & IFF_ALLMULTI)
-//						addTop(flag_list, IFF_ALLMULTI);
-//					if (flags & IFF_OACTIVE)
-//						addTop(flag_list, IFF_OACTIVE);
-//					if (flags & IFF_SIMPLEX)
-//						addTop(flag_list, IFF_SIMPLEX);
-//					if (flags & IFF_MULTICAST)
-//						addTop(flag_list, IFF_MULTICAST);
-//				}
-//
-//			}
-//
-//
-//        }
 
     }
 
@@ -246,35 +180,32 @@ void printFlags(unsigned int flags){
 	// add all the flags to the list
 	if(flags){
 		if (flags & IFF_UP)
-			addTop(flag_list, IFF_UP);
+			addBottom(flag_list, IFF_UP);
 		if (flags & IFF_BROADCAST)
-			addTop(flag_list, IFF_BROADCAST);
+			addBottom(flag_list, IFF_BROADCAST);
 		if (flags & IFF_DEBUG)
-			addTop(flag_list, IFF_DEBUG);
+			addBottom(flag_list, IFF_DEBUG);
 		if (flags & IFF_LOOPBACK)
-			addTop(flag_list, IFF_LOOPBACK);
+			addBottom(flag_list, IFF_LOOPBACK);
 		if (flags & IFF_POINTOPOINT)
-			addTop(flag_list, IFF_POINTOPOINT);
+			addBottom(flag_list, IFF_POINTOPOINT);
 		if (flags & IFF_NOTRAILERS)
-			addTop(flag_list, IFF_NOTRAILERS);
+			addBottom(flag_list, IFF_NOTRAILERS);
 		if (flags & IFF_RUNNING)
-			addTop(flag_list, IFF_RUNNING);
+			addBottom(flag_list, IFF_RUNNING);
 		if (flags & IFF_NOARP)
-			addTop(flag_list, IFF_NOARP);
+			addBottom(flag_list, IFF_NOARP);
 		if (flags & IFF_PROMISC)
-			addTop(flag_list, IFF_PROMISC);
+			addBottom(flag_list, IFF_PROMISC);
 		if (flags & IFF_ALLMULTI)
-			addTop(flag_list, IFF_ALLMULTI);
+			addBottom(flag_list, IFF_ALLMULTI);
 		if (flags & IFF_OACTIVE)
-			addTop(flag_list, IFF_OACTIVE);
+			addBottom(flag_list, IFF_OACTIVE);
 		if (flags & IFF_SIMPLEX)
-			addTop(flag_list, IFF_SIMPLEX);
+			addBottom(flag_list, IFF_SIMPLEX);
 		if (flags & IFF_MULTICAST)
-			addTop(flag_list, IFF_MULTICAST);
+			addBottom(flag_list, IFF_MULTICAST);
 	}
-
-	printf("\tFlags:%u", flags);
-	printf("<");
 
 	for(node = flag_list->first; node != NULL; node = node->next){
 		// comma is not needed on the first element
@@ -327,5 +258,81 @@ void printFlags(unsigned int flags){
 				break;
 		}
 	}
-	printf("> ");
+}
+void printCapabilities(unsigned int capabilities){
+	// capabilities = 0 => nothing to print
+	if(!capabilities)
+		return;
+
+	int comma_flag = 0; // flag for comma
+	node_t* node;
+	linked_list_t *option_list = malloc(sizeof(linked_list_t));
+
+	// handle all the capabilites and push it up the list
+	if(capabilities & IFCAP_RXCSUM)
+		addBottom(option_list, IFCAP_RXCSUM);
+	if(capabilities & IFCAP_TXCSUM)
+		addBottom(option_list, IFCAP_TXCSUM);
+	if(capabilities & IFCAP_VLAN_MTU)
+		addBottom(option_list, IFCAP_VLAN_MTU);
+	if(capabilities & IFCAP_VLAN_HWTAGGING)
+		addBottom(option_list, IFCAP_VLAN_HWTAGGING);
+	if(capabilities & IFCAP_JUMBO_MTU)
+		addBottom(option_list, IFCAP_JUMBO_MTU);
+	if(capabilities & IFCAP_TSO4)
+		addBottom(option_list, IFCAP_TSO4);
+	if(capabilities & IFCAP_TSO6)
+		addBottom(option_list, IFCAP_TSO6);
+	if(capabilities & IFCAP_LRO)
+		addBottom(option_list, IFCAP_LRO);
+	if(capabilities & IFCAP_AV)
+		addBottom(option_list, IFCAP_AV);
+	if(capabilities & IFCAP_TXSTATUS)
+		addBottom(option_list, IFCAP_TXSTATUS);
+
+	// identical handling as in printFlags()
+	for(node = option_list->first; node != NULL; node = node->next){
+		// comma is not needed on the first element
+		if(comma_flag){
+			printf(", ");
+		} else {
+			comma_flag = 1;
+		}
+		switch(node->value){
+			case IFCAP_RXCSUM:
+				printf("RXCSUM");
+				break;
+			case IFCAP_TXCSUM:
+				printf("TXCSUM");
+				break;
+			case IFCAP_VLAN_MTU:
+				printf("VLAN MTU");
+				break;
+			case IFCAP_JUMBO_MTU:
+				printf("JUMBO MTU");
+				break;
+			case IFCAP_TSO4:
+				printf("TS04");
+				break;
+			case IFCAP_TSO6:
+				printf("TS06");
+				break;
+			case IFCAP_LRO:
+				printf("LR0");
+				break;
+			case IFCAP_AV:
+				printf("AV BRIDGING");
+				break;
+			case IFCAP_TXSTATUS:
+				printf("TXSTATUS");
+				break;
+			default:
+				break;
+		}
+	}
+}
+void printHeader(char* name, void (*callback)(unsigned int), unsigned int param){
+	printf("\n\t%s:%u<", name, param);
+	callback(param);
+	printf("> \n");
 }
