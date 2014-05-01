@@ -36,6 +36,8 @@ void displayComputerInfo();
 void getInterfaceList(char *[]);
 int isInterface(char *[], char *);
 void manipulateIfState(char *, int);
+void printInterfaceInfo(struct ifaddrs *);
+void handleSingleInterface(char *, void(*)(struct ifaddrs *));
 
 int
 main(int argc, char *argv[]){
@@ -49,6 +51,7 @@ main(int argc, char *argv[]){
 				 "Options:\n\n"
 				 "up [interface name]					Brings the interface up\n"
 				 "down [interface name]					Puts the interface down\n"
+				 "[interface name]						Displays information only for a given interface\n"
 				 "help									Shows this screen\n"
 				 "[no options]							Shows the computer network interface configurations\n");
 			exit(0);
@@ -60,7 +63,7 @@ main(int argc, char *argv[]){
 			// bring the interface up
 			if (argv[2] != NULL && isInterface(interface_list, argv[2])){
 				manipulateIfState(argv[2], 1);
-				printf("The device %s has been brought up", argv[2]);
+				printf("The device %s has been brought up\n", argv[2]);
 			} else {
 				puts("No such device exists. Exiting...");
 			}
@@ -68,10 +71,14 @@ main(int argc, char *argv[]){
 			// bring the interface down
 			if (argv[2] != NULL && isInterface(interface_list, argv[2])){
 				manipulateIfState(argv[2], 0);
-				printf("The device %s has been brought down", argv[2]);
+				printf("The device %s has been brought down\n", argv[2]);
 			} else {
 				puts("No such device exists. Exiting...");
 			}
+		} else if(isInterface(interface_list, argv[1])){
+			// display only the particular interface's network information
+			// it's done via callback
+			handleSingleInterface(argv[1], &printInterfaceInfo);
 		} else{
 			puts("Type in ./ifconfig help for usage.");
 		}
@@ -318,10 +325,6 @@ void displayComputerInfo(){
 		exit(1);
 	}
 
-	// create a muppet socket to act as a file descriptor for ioctl()
-	// I can create it here, since I can reuse it
-	int fd=socket(AF_INET,SOCK_DGRAM,0);
-
 	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
 		// make sure the address is not null
 		if (strcmp(current_interface, ifa->ifa_name) != 0){
@@ -333,95 +336,12 @@ void displayComputerInfo(){
 			continue;
 		}
 
-		// create the ifr & ifm
-		// ifr is more general and more stuff can be retrieved, while
-		// ifm is purely for media information
-		struct ifreq ifr;
-		struct ifmediareq ifm;
-
-		size_t if_name_len=strlen(current_interface);
-		// ensure the interface name is not too long, since  ifr_name is fixed length buffer
-		if (if_name_len < sizeof(ifr.ifr_name) && if_name_len < sizeof(ifm.ifm_name) ) {
-			// set name for IFR
-			memcpy(ifr.ifr_name,current_interface,if_name_len);
-			ifr.ifr_name[if_name_len]=0;
-
-			// set name for IFM
-			memcpy(ifm.ifm_name, current_interface, if_name_len);
-			ifm.ifm_name[if_name_len]=0;
-		} else {
-			puts("Interface name is too long");
-			exit(1);
-		}
-
-		//output current interface
-		printf("Interface: %s", current_interface);
-
-		if (fd==-1) {
-			puts("Socket could not be created");
-			exit(1);
-		}
-
-		// print flags
-		printHeader("Flags", &printFlags, ifa->ifa_flags);
-		// prints the MTU
-		if (ioctl(fd, SIOCGIFMTU, &ifr) != -1)
-				printf("\tMTU: %d", ifr.ifr_metric);
-
-		// prints the options
-		if (ioctl(fd, SIOCGIFCAP, &ifr) != -1)
-			printHeader("Options", &printCapabilities, ifr.ifr_curcap);
-
-		// prints the MAC address
-		if(ifa->ifa_addr->sa_family == AF_LINK){
-			struct sockaddr_dl *mac_addr = (struct sockaddr_dl *)ifa->ifa_addr;
-			unsigned char mac[6];
-			// check if he address length is 6 bytes
-			if (6 == mac_addr->sdl_alen) {
-			  memcpy(mac, LLADDR(mac_addr), mac_addr->sdl_alen);
-			  printf("\tMAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
-			}
-		}
-
-		// print status
-		if (ioctl(fd, SIOCGIFMEDIA, &ifm) != -1)
-					printf("\tStatus:%s\n", ifm.ifm_status == 3 ? "Active" : ifm.ifm_status == 1 ?
-							"Inactive" : "Unknown"); // 3 is active and 1 is inactive
-
-		/**
-		 * I'm not going to handle media because it has way too many flags to implement
-		 * in a timely manner
-		 */
-
-		// IP
-		printIPAddress("IP", IP_ADDR, fd, ifr);
-
-		// Point to point
-		printIPAddress("Point-to-Point", P2P_ADDR, fd, ifr);
-
-		// broadcast
-		printIPAddress("Broadcast", BCAST_ADDR, fd, ifr);
-
-		//netmask
-		printIPAddress("Netmask", MASK_ADDR, fd, ifr);
-
-		//autoconf
-		printIPAddress("Autoconf", AUTOCONF_ADDR, fd, ifr);
-
-		//autoconf mask
-		printIPAddress("Autoconf mask", AUTOCONF_MASK, fd, ifr);
-
-		//ipv4all
-		printIPAddress("IPv4All", IPV4ALL_ADDR, fd, ifr);
-
-		//link level
-		printIPAddress("Link level", LINK_LEVEL_ADDR, fd, ifr);
+		printInterfaceInfo(ifa);
 
 	}
 
 	// free the interfaces
 	freeifaddrs(ifaddr);
-	close(fd);
 }
 /**
  * Computes the list of the network interfaces on the computer
@@ -447,6 +367,29 @@ void getInterfaceList(char *interfaces[]){
 			}
 		}
 		freeifaddrs(ifaddr);
+}
+
+/**
+ * Finds the interface, given its name, and calls the callback on it
+ */
+void handleSingleInterface(char *ifname, void(*callback)(struct ifaddrs *)){
+	struct ifaddrs *ifaddr, *ifa;
+	// get the interfaces addresses
+	if (getifaddrs(&ifaddr) == -1) {
+		perror("Could not access the interfaces addresses. Exiting...");
+		exit(1);
+	}
+
+	for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next){
+		if (strcmp(ifname, ifa->ifa_name) == 0){
+			// strings equal
+			callback(ifa);
+			// I need to break out, once the callback has been called, since there are more than one
+			// ifa instances with the same name
+			break;
+		}
+	}
+	freeifaddrs(ifaddr);
 }
 
 /**
@@ -500,3 +443,97 @@ void manipulateIfState(char *ifname, int state /* 1 - up, 0 - down */){
 	close(fd);
 }
 
+/**
+ * Prints interface information for the interface ifa
+ */
+void printInterfaceInfo(struct ifaddrs *ifa){
+	// create a puppet socket to act as a file descriptor for ioctl()
+	// I can create it here, since I can reuse it
+	int fd=socket(AF_INET,SOCK_DGRAM,0);
+
+	// create the ifr & ifm
+	// ifr is more general and more stuff can be retrieved, while
+	// ifm is purely for media information
+	struct ifreq ifr;
+	struct ifmediareq ifm;
+
+	size_t if_name_len=strlen(ifa->ifa_name);
+	// ensure the interface name is not too long, since  ifr_name is fixed length buffer
+	if (if_name_len < sizeof(ifr.ifr_name) && if_name_len < sizeof(ifm.ifm_name) ) {
+		// set name for IFR
+		memcpy(ifr.ifr_name, ifa->ifa_name, if_name_len);
+		ifr.ifr_name[if_name_len]=0;
+
+		// set name for IFM
+		memcpy(ifm.ifm_name, ifa->ifa_name, if_name_len);
+		ifm.ifm_name[if_name_len]=0;
+	} else {
+		puts("Interface name is too long");
+		exit(1);
+	}
+
+	//output current interface
+	printf("Interface: %s", ifa->ifa_name);
+
+	if (fd==-1) {
+		puts("Socket could not be created");
+		exit(1);
+	}
+
+	// print flags
+	printHeader("Flags", &printFlags, ifa->ifa_flags);
+	// prints the MTU
+	if (ioctl(fd, SIOCGIFMTU, &ifr) != -1)
+			printf("\tMTU: %d", ifr.ifr_metric);
+
+	// prints the options
+	if (ioctl(fd, SIOCGIFCAP, &ifr) != -1)
+		printHeader("Options", &printCapabilities, ifr.ifr_curcap);
+
+	// prints the MAC address
+	if(ifa->ifa_addr->sa_family == AF_LINK){
+		struct sockaddr_dl *mac_addr = (struct sockaddr_dl *)ifa->ifa_addr;
+		unsigned char mac[6];
+		// check if he address length is 6 bytes
+		if (6 == mac_addr->sdl_alen) {
+		  memcpy(mac, LLADDR(mac_addr), mac_addr->sdl_alen);
+		  printf("\tMAC Address: %02x:%02x:%02x:%02x:%02x:%02x\n", mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+		}
+	}
+
+	// print status
+	if (ioctl(fd, SIOCGIFMEDIA, &ifm) != -1)
+				printf("\tStatus:%s\n", ifm.ifm_status == 3 ? "Active" : ifm.ifm_status == 1 ?
+						"Inactive" : "Unknown"); // 3 is active and 1 is inactive
+
+	/**
+	 * I'm not going to handle media because it has way too many flags to implement
+	 * in a timely manner
+	 */
+
+	// IP
+	printIPAddress("IP", IP_ADDR, fd, ifr);
+
+	// Point to point
+	printIPAddress("Point-to-Point", P2P_ADDR, fd, ifr);
+
+	// broadcast
+	printIPAddress("Broadcast", BCAST_ADDR, fd, ifr);
+
+	//netmask
+	printIPAddress("Netmask", MASK_ADDR, fd, ifr);
+
+	//autoconf
+	printIPAddress("Autoconf", AUTOCONF_ADDR, fd, ifr);
+
+	//autoconf mask
+	printIPAddress("Autoconf mask", AUTOCONF_MASK, fd, ifr);
+
+	//ipv4all
+	printIPAddress("IPv4All", IPV4ALL_ADDR, fd, ifr);
+
+	//link level
+	printIPAddress("Link level", LINK_LEVEL_ADDR, fd, ifr);
+
+	close(fd);
+}
