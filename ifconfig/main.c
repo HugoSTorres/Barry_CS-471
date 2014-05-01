@@ -24,16 +24,23 @@
 #define AUTOCONF_MASK 0x06
 #define IPV4ALL_ADDR 0x07
 #define LINK_LEVEL_ADDR 0x08
-
+// assumption is no more than 16 network devices on a computer
+// wasting space but quick solution
+#define MAX_NUM_IFS 16
 
 void printIPAddress(char *, int, int, struct ifreq);
 void printFlags(unsigned int);
 void printHeader(char *, void (*)(unsigned int), unsigned int);
 void printCapabilities(unsigned int);
 void displayComputerInfo();
+void getInterfaceList(char *[]);
+int isInterface(char *[], char *);
+void manipulateIfState(char *, int);
 
 int
 main(int argc, char *argv[]){
+	char *interface_list[MAX_NUM_IFS];
+
 	if (argc <= 1){
 		displayComputerInfo();
 	} else {
@@ -46,11 +53,25 @@ main(int argc, char *argv[]){
 				 "[no options]							Shows the computer network interface configurations\n");
 			exit(0);
 		}
+		// gets the interface list
+		getInterfaceList(interface_list);
 
 		if (!strcmp(argv[1], "up")){
 			// bring the interface up
+			if (argv[2] != NULL && isInterface(interface_list, argv[2])){
+				manipulateIfState(argv[2], 1);
+				printf("The device %s has been brought up", argv[2]);
+			} else {
+				puts("No such device exists. Exiting...");
+			}
 		} else if (!strcmp(argv[1], "down")){
 			// bring the interface down
+			if (argv[2] != NULL && isInterface(interface_list, argv[2])){
+				manipulateIfState(argv[2], 0);
+				printf("The device %s has been brought down", argv[2]);
+			} else {
+				puts("No such device exists. Exiting...");
+			}
 		} else{
 			puts("Type in ./ifconfig help for usage.");
 		}
@@ -58,6 +79,9 @@ main(int argc, char *argv[]){
     exit(0);
 }
 
+/**
+ * Prints the IP addresses, given the call method and name
+ */
 void printIPAddress(char *name, int method, int fd, struct ifreq ifr){
 	int result;
 	switch(method){
@@ -100,6 +124,10 @@ void printIPAddress(char *name, int method, int fd, struct ifreq ifr){
 	if (strcmp(ip, "0.0.0.0"))
 		printf("\t%s address: %s\n", name, inet_ntoa(ipaddr->sin_addr));
 }
+
+/**
+ * Callback function to print the flags
+ */
 void printFlags(unsigned int flags){
 	linked_list_t *flag_list = malloc(sizeof(linked_list_t)); // list for flags
 	node_t* node;
@@ -187,6 +215,10 @@ void printFlags(unsigned int flags){
 		}
 	}
 }
+
+/**
+ * Callback function to print the options/capabilities
+ */
 void printCapabilities(unsigned int capabilities){
 	// capabilities = 0 => nothing to print
 	if(!capabilities)
@@ -259,11 +291,19 @@ void printCapabilities(unsigned int capabilities){
 		}
 	}
 }
+
+/**
+ * Tiny utility function to print the formating for headers and call the callback
+ */
 void printHeader(char* name, void (*callback)(unsigned int), unsigned int param){
 	printf("\n\t%s:%u<", name, param);
 	callback(param);
 	printf("> \n");
 }
+
+/**
+ * Displays all the network interfaces and their parameters
+ */
 void displayComputerInfo(){
 	struct ifaddrs *ifaddr, *ifa;
 	int family, s;
@@ -271,14 +311,6 @@ void displayComputerInfo(){
 	char *family_str;
 	unsigned int flags;
 	char *current_interface = "none"; // holds the value for the current interface.
-
-	/**
-	 * The way I use the flag is for detection whether ioctl request was successful
-	 * or failed.
-	 * If it was successful, continue. else - jump
-	 */
-	unsigned char flag = 0; // the flag will be used for convenience
-
 
 	// get the interfaces addresses
 	if (getifaddrs(&ifaddr) == -1) {
@@ -391,3 +423,80 @@ void displayComputerInfo(){
 	freeifaddrs(ifaddr);
 	close(fd);
 }
+/**
+ * Computes the list of the network interfaces on the computer
+ */
+void getInterfaceList(char *interfaces[]){
+	char *current_if = "none";
+	int count = 0;
+	struct ifaddrs *ifaddr, *ifa;
+	// get the interfaces addresses
+		if (getifaddrs(&ifaddr) == -1) {
+			perror("Could not access the interfaces addresses. Exiting...");
+			exit(1);
+		}
+
+		for (ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next){
+			if (strcmp(current_if, ifa->ifa_name) != 0){
+				// strings not equal
+				if(ifa->ifa_addr != NULL){
+					current_if = ifa->ifa_name;
+					interfaces[count++] = current_if;
+				}
+
+			}
+		}
+		freeifaddrs(ifaddr);
+}
+
+/**
+ * Checks whether the item belongs to the interface list
+ */
+int isInterface(char *interfaces[], char *interface){
+	int i = 0;
+	for(; i < MAX_NUM_IFS; i++){
+		if (!strcmp(interfaces[i], interface))
+			return 1;
+	}
+	return 0;
+}
+
+/**
+ * Brings the device up or down, depending on the state parameter
+ */
+void manipulateIfState(char *ifname, int state /* 1 - up, 0 - down */){
+	struct ifreq ifr;
+
+	size_t if_name_len=strlen(ifname);
+	if (if_name_len < sizeof(ifr.ifr_name)) {
+		// set name for IFR
+		memcpy(ifr.ifr_name,ifname,if_name_len);
+		ifr.ifr_name[if_name_len]=0;
+	} else {
+		puts("Interface name is too long");
+		exit(1);
+	}
+	int fd=socket(AF_INET,SOCK_DGRAM,0);
+
+
+	if (fd < 0){
+		puts("Error creating a socket.");
+		exit(1);
+	}
+	// get the current flags
+	if(ioctl(fd, SIOCGIFFLAGS, &ifr) == -1){
+		puts("Error retrieving flags");
+		exit(1);
+	}
+	// handle up or down
+	if (state)
+		ifr.ifr_flags |= IFF_UP;
+	else
+		ifr.ifr_flags = ifr.ifr_flags & ~IFF_UP;
+	if(ioctl(fd, SIOCSIFFLAGS, &ifr) == -1){
+		puts("Error setting flags");
+		exit(1);
+	}
+	close(fd);
+}
+
